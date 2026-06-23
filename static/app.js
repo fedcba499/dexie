@@ -16,8 +16,26 @@ async function addTodo() {
   loadTodos();
 }
 
+async function saveTodo() {
+  const title = document.getElementById("todoInput").value;
+  const response = await fetch("/api/todos", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      title: title
+    })
+  });
+
+  document.getElementById("todoInput").value = "";
+}
+
 async function loadTodos() {
-  const todos = await db.todos.toArray();
+
+  const response = await fetch("/api/todos");
+
+  const todos = await response.json();
 
   const list = document.getElementById("todoList");
   list.innerHTML = "";
