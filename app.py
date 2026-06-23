@@ -22,7 +22,7 @@ def add_todo():
     data = request.get_json()
 
     todos.insert({
-        "title":data["title"]
+        "title": data["title"]
     })
 
     return jsonify({

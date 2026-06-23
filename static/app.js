@@ -1,55 +1,114 @@
+// -------------------- DB --------------------
 const db = new Dexie("TodoDB");
 
 db.version(1).stores({
-  todos: "++id, title"
+  todos: "++id, title, pendingSync"
 });
 
-async function addTodo() {
+
+// -------------------- SAVE TODO --------------------
+async function saveTodo() {
+
   const input = document.getElementById("todoInput");
-  const value = input.value;
+  const title = input.value.trim();
 
-  if (!value) return;
+  if (!title) return;
 
-  await db.todos.add({ title: value });
+  // save locally first
+  const id = await db.todos.add({
+    title,
+    pendingSync: true
+  });
+
+  console.log(id)
 
   input.value = "";
   loadTodos();
+
+  // try sync if online
+  if (navigator.onLine) {
+    syncTodo(id);
+  }
 }
 
-async function saveTodo() {
-  const title = document.getElementById("todoInput").value;
-  const response = await fetch("/api/todos", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      title: title
-    })
-  });
 
-  document.getElementById("todoInput").value = "";
+// -------------------- SYNC SINGLE TODO --------------------
+async function syncTodo(id) {
+
+  const todo = await db.todos.get(id);
+  if (!todo) return;
+
+  if (!navigator.onLine) {
+    console.log("No internet");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/todos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(todo)
+    });
+
+    if (res.ok) {
+      await db.todos.update(id, { pendingSync: false });
+    }
+
+  } catch (err) {
+    console.log("Sync failed:", err);
+  }
 }
 
+
+// -------------------- LOAD TODOS --------------------
 async function loadTodos() {
 
-  const response = await fetch("/api/todos");
-
-  const todos = await response.json();
+  const todos = await db.todos.toArray();
 
   const list = document.getElementById("todoList");
   list.innerHTML = "";
 
   todos.forEach(todo => {
+
     const li = document.createElement("li");
-    li.textContent = todo.title;
+
+    li.textContent =
+      todo.title +
+      (todo.pendingSync ? " (offline)" : "");
+
     list.appendChild(li);
   });
 }
 
-loadTodos();
 
+// -------------------- SYNC ALL PENDING --------------------
+async function syncPendingTodos() {
+
+  if (!navigator.onLine) return;
+
+  const pending = await db.todos
+    .filter(todo => todo.pendingSync === true)
+    .toArray();
+
+  for (const todo of pending) {
+    await syncTodo(todo.id);
+  }
+
+  console.log("Sync complete");
+}
+
+
+// -------------------- ONLINE EVENT --------------------
+window.addEventListener("online", () => {
+  console.log("Back online");
+  syncPendingTodos();
+});
+
+
+// -------------------- SERVICE WORKER --------------------
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js")
-    .then(() => console.log("Service Worker Registered"))
+  navigator.serviceWorker.register("/static/service-worker.js")
+    .then(() => console.log("SW registered"));
 }

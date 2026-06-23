@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>Dexie Todo App</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#000000">
 </head>
 
@@ -11,7 +11,7 @@
 
   <!-- Input -->
   <input type="text" id="todoInput" placeholder="Enter todo">
-  <button onclick="addTodo()">Add</button>
+  <button onclick="saveTodo()">Add</button>
 
   <hr>
 
@@ -19,7 +19,7 @@
   <ul id="todoList"></ul>
 
   <!-- Dexie library -->
-  <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+  <script src="/static/dexie.js"></script>
 
   <!-- Our JS file -->
   <!-- <script src="app.js"></script> -->
